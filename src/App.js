@@ -1,62 +1,117 @@
 import React, { useEffect, useState } from 'react'
-import { withAuthenticator } from '@aws-amplify/ui-react';
+import { AmplifyAuthenticator, AmplifySignIn, AmplifySignUp } from '@aws-amplify/ui-react';
 import { AuthState, onAuthUIStateChange } from '@aws-amplify/ui-components';
-import Header from './components/Header';
-import BootstrapButton  from 'react-bootstrap/Button'
+import Header from './components/Header/Header';
+import './style/App.scss';
+import { createTodo } from './graphql/mutations'
+import { listTodos } from './graphql/queries'
+import { API, graphqlOperation } from 'aws-amplify'
 
-const TempNotes = [
-  {
-    id: 1,
-    note: 'ciao'
-  }
-]
+
+
+const initialState = { id: '', note: '' }
+
 function App() {
   // Authenticated User
   const [authState, setAuthState] = useState();
   const [user, setUser] = useState();
-  const [notes, setNote] = useState();
 
-  
+  const [formState, setFormState] = useState(initialState)
+  const [todos, setTodos] = useState([])
+
 
 
   useEffect(() => {
     return onAuthUIStateChange((nextAuthState, authData) => {
       setAuthState(nextAuthState);
       setUser(authData)
+
     });
   }, []);
 
 
+  useEffect(() => {
+    fetchTodos()
+  }, [])
 
-  return AuthState.SignedIn === AuthState.SignedIn && user ? (
+
+  function setInput(key, value) {
+    setFormState({ ...formState, [key]: value })
+  }
+
+  async function fetchTodos() {
+    try {
+      const todoData = await API.graphql(graphqlOperation(listTodos))
+      const todos = todoData.data.listTodos.items
+      setTodos(todos)
+    } catch (err) { console.log('error fetching todos') }
+  }
+
+  async function addTodo() {
+    try {
+      if (!formState.note) return
+      const todo = { ...formState }
+      setTodos([...todos, todo])
+      setFormState(initialState)
+      await API.graphql(graphqlOperation(createTodo, { input: todo }))
+    } catch (err) {
+      console.log('error creating todo:', err)
+    }
+  }
+
+
+
+  return authState === AuthState.SignedIn && user ? (
 
 
     <div>
-      <Header user={user} state={AuthState} />
-      <div className="flex flex-column items-center justify-center pa3 bg-washed-red"></div>
-      <h1 className="code f2-1">Amplify NoteTaker</h1>
-      {/* Form */}
-      <form className="mb3">
-        <input
-          type="text"
-          className="pa2 f4"
-          placeholder="write your note"
-        />
-    <BootstrapButton
-          className=""
-          type="submit"
-          >Add Note</BootstrapButton>
-      </form>
-
-      {/* {Note List} */}
       <div>
-        {notes.map(item => (
-          <div key={item.id}>{item.note}<span><button>X</button></span></div>
-        ))}
+        <Header user={user} />
+        <input
+          value={formState.name}
+          placeholder="Note"
+          onChange={event => setInput('note', event.target.value)}
+        />
+
+        <button onClick={addTodo}>Create Todo</button>
+        {
+          todos.map((todo, index) => (
+            <div key={todo.id ? todo.id : index} >
+              <p>{todo.note}</p>
+            </div>
+          ))
+        }
       </div>
     </div>
   ) :
-    ''
+    <AmplifyAuthenticator usernameAlias="email" >
+
+      {/* override sign in form params */}
+      <AmplifySignIn slot="sign-in" usernameAlias="email" />
+
+      {/* override sign up form params */}
+      <AmplifySignUp
+        slot="sign-up"
+        usernameAlias="email"
+        formFields={[
+          {
+            type: "email",
+            label: "Email",
+            placeholder: "Email",
+            required: true
+          },
+          {
+            type: "password",
+            label: "Password",
+            placeholder: "Password",
+            required: true,
+          },
+        ]}
+      />
+    </AmplifyAuthenticator>
 }
 
-export default withAuthenticator(App);
+export default App;
+
+
+
