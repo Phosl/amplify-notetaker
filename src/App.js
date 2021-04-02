@@ -10,6 +10,7 @@ import Sidebar from './components/Sidebar/Sidebar';
 import Card from './components/Card/Card';
 import CardVideo from './components/CardVideo/CardVideo';
 
+import Accordion from 'react-spring-accordion';
 
 const initialState = { note: '' }
 
@@ -170,6 +171,14 @@ function App() {
             </div>
           </div>
           <div className="col-12">
+
+          <Accordion.Wrapper>
+    <Accordion.Item>
+      <Accordion.Heading>Heading</Accordion.Heading>
+      <Accordion.Child>Child</Accordion.Child>
+    </Accordion.Item>
+  </Accordion.Wrapper>
+
             <hr />
             <div className="label">h1</div>
             <h1>Lorem ipsum dolor sit amet, consectetur adipiscing elit. </h1>
